@@ -24,7 +24,10 @@ add_library( # Sets the name of the library.
         SHARED
 
         # Provides a relative path to your source file(s).
+        android_main.cpp
+        native_engine.cpp
         game_activity_included.cpp
+        game_text_input_included.cpp
         native_app_glue_included.c
         native-lib.cpp)
 
@@ -47,6 +50,8 @@ find_library( # Sets the name of the path variable.
 
 target_link_libraries( # Specifies the target library.
         gameactivitytutorial
+
+        android
 
         game-activity::game-activity
         # Links the target library to the log library
