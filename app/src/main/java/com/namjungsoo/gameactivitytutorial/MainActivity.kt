@@ -1,10 +1,10 @@
 package com.namjungsoo.gameactivitytutorial
 
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
+import com.google.androidgamesdk.GameActivity
 import com.namjungsoo.gameactivitytutorial.databinding.ActivityMainBinding
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : GameActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
