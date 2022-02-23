@@ -41,6 +41,10 @@ android {
         }
     }
     buildFeatures {
+        // To use the Android Frame Pacing or Android Performance Tuner libraries, enable
+        // native dependencies to be imported. Libraries will be made available to your CMake build
+        // as packages named "games-frame-pacing" and "games-performance-tuner".
+        prefab = true
         viewBinding true
     }
 }
@@ -55,5 +59,18 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
-    implementation "androidx.games:games-activity:1.1.0-rc01"
+    // To use the Android Frame Pacing library
+    implementation("androidx.games:games-frame-pacing:1.9.1")
+
+    // To use the Android Performance Tuner
+    implementation("androidx.games:games-performance-tuner:1.5.0")
+
+    // To use the Games Activity library
+    implementation("androidx.games:games-activity:1.1.0-rc01")
+
+    // To use the Games Controller Library
+    implementation("androidx.games:games-controller:1.1.0-rc01")
+
+    // To use the Games Text Input Library
+    implementation("androidx.games:games-text-input:1.1.0")
 }
