@@ -18,7 +18,7 @@ public:
 private:
     bool IsAnimating();
     void DoFrame();
-//    void HandleGameActivityInput();
+    void HandleGameActivityInput();
 
     bool InitDisplay();
     bool InitSurface();

@@ -3,10 +3,29 @@
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <cstdlib>
+#include <cstring>
+#include "Log.h"
 
 #define LOG_TAG "GameActivityTutorial"
-#include "Log.h"
 #define VLOGD ALOGD
+
+struct CookedEvent {
+    int type;
+
+    // for pointer events
+    int motionPointerId;
+    bool motionIsOnScreen;
+    float motionX, motionY;
+    float motionMinX, motionMaxX;
+    float motionMinY, motionMaxY;
+};
+
+// event type
+#define COOKED_EVENT_TYPE_POINTER_DOWN 0
+#define COOKED_EVENT_TYPE_POINTER_UP 1
+#define COOKED_EVENT_TYPE_POINTER_MOVE 2
+
+typedef bool (*CookedEventCallback)(struct CookedEvent *event);
 
 NativeEngine::NativeEngine(struct android_app *app) {
     mApp = app;
@@ -95,6 +114,64 @@ static void _handle_cmd_proxy(struct android_app *app, int32_t cmd) {
     engine->HandleCommand(cmd);
 }
 
+static bool _cook_game_activity_motion_event(GameActivityMotionEvent *motionEvent,
+                                             int screenWidth, int screenHeight,
+                                             CookedEventCallback callback) {
+    if (motionEvent->pointerCount > 0) {
+        int action = motionEvent->action;
+        int actionMasked = action & AMOTION_EVENT_ACTION_MASK;
+        int ptrIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >>
+                                                                          AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+
+        if (ptrIndex < motionEvent->pointerCount) {
+            struct CookedEvent ev;
+            memset(&ev, 0, sizeof(ev));
+
+            if (actionMasked == AMOTION_EVENT_ACTION_DOWN || actionMasked ==
+                                                             AMOTION_EVENT_ACTION_POINTER_DOWN) {
+                ev.type = COOKED_EVENT_TYPE_POINTER_DOWN;
+            } else if (actionMasked == AMOTION_EVENT_ACTION_UP || actionMasked ==
+                                                                  AMOTION_EVENT_ACTION_POINTER_UP) {
+                ev.type = COOKED_EVENT_TYPE_POINTER_UP;
+            } else {
+                ev.type = COOKED_EVENT_TYPE_POINTER_MOVE;
+            }
+
+            ev.motionPointerId = motionEvent->pointers[ptrIndex].id;
+            ev.motionIsOnScreen = motionEvent->source == AINPUT_SOURCE_TOUCHSCREEN;
+            ev.motionX = GameActivityPointerAxes_getX(&motionEvent->pointers[ptrIndex]);
+            ev.motionY = GameActivityPointerAxes_getY(&motionEvent->pointers[ptrIndex]);
+
+            if (ev.motionIsOnScreen) {
+                // use screen size as the motion range
+                ev.motionMinX = 0.0f;
+                ev.motionMaxX = screenWidth;
+                ev.motionMinY = 0.0f;
+                ev.motionMaxY = screenHeight;
+            }
+
+            return callback(&ev);
+        }
+    }
+    return false;
+}
+
+static bool _cooked_event_callback(struct CookedEvent *event) {
+    switch (event->type) {
+        case COOKED_EVENT_TYPE_POINTER_DOWN:
+            ALOGD("COOKED_EVENT_TYPE_POINTER_DOWN: %f %f %f %f %f %f %d", event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
+            return true;
+        case COOKED_EVENT_TYPE_POINTER_UP:
+            ALOGD("COOKED_EVENT_TYPE_POINTER_UP: %f %f %f %f %f %f %d", event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
+            return true;
+        case COOKED_EVENT_TYPE_POINTER_MOVE:
+            ALOGD("COOKED_EVENT_TYPE_POINTER_MOVE: %f %f %f %f %f %f %d", event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
+            return true;
+        default:
+            return false;
+    }
+}
+
 void NativeEngine::HandleCommand(int32_t cmd) {
     VLOGD("NativeEngine: handling command %d.", cmd);
     switch (cmd) {
@@ -177,7 +254,7 @@ void NativeEngine::HandleCommand(int32_t cmd) {
 }
 
 bool NativeEngine::IsAnimating() {
-    VLOGD("NativeEngine: IsAnimating %d %d %d", mHasFocus, mIsVisible, mHasWindow);
+//    VLOGD("NativeEngine: IsAnimating %d %d %d", mHasFocus, mIsVisible, mHasWindow);
     return mHasFocus && mIsVisible && mHasWindow;
 }
 
@@ -288,6 +365,21 @@ void NativeEngine::DoFrame() {
         return;
     }
 
+    // how big is the surface? We query every frame because it's cheap, and some
+    // strange devices out there change the surface size without calling any callbacks...
+    int width, height;
+    eglQuerySurface(mEglDisplay, mEglSurface, EGL_WIDTH, &width);
+    eglQuerySurface(mEglDisplay, mEglSurface, EGL_HEIGHT, &height);
+
+    if (width != mSurfWidth || height != mSurfHeight) {
+        // notify scene manager that the surface has changed size
+        ALOGI("NativeEngine: surface changed size %dx%d --> %dx%d", mSurfWidth, mSurfHeight,
+              width, height);
+        mSurfWidth = width;
+        mSurfHeight = height;
+        glViewport(0, 0, mSurfWidth, mSurfHeight);
+    }
+
     // Swap buffers.
     if (EGL_FALSE == eglSwapBuffers(mEglDisplay, mEglSurface)) {
         HandleEglError(eglGetError());
@@ -314,7 +406,7 @@ void NativeEngine::GameLoop() {
             }
         }
 
-//        HandleGameActivityInput();
+        HandleGameActivityInput();
 
         if (IsAnimating()) {
             DoFrame();
@@ -322,45 +414,18 @@ void NativeEngine::GameLoop() {
     }
 }
 
-//void NativeEngine::HandleGameActivityInput() {
-//    // If we get any key or motion events that were handled by a game controller,
-//    // read controller data and cook it into an event
-//    bool cookGameControllerEvent = false;
-//
-//    // Swap input buffers so we don't miss any events while processing inputBuffer.
-//    android_input_buffer* inputBuffer = android_app_swap_input_buffers(mApp);
-//    // Early exit if no events.
-//    if (inputBuffer == nullptr) return;
-//
-//    if (inputBuffer->keyEventsCount != 0) {
-//        for (uint64_t i = 0; i < inputBuffer->keyEventsCount; ++i) {
-//            GameActivityKeyEvent* keyEvent = &inputBuffer->keyEvents[i];
-//            if (Paddleboat_processGameActivityKeyInputEvent(keyEvent,
-//                                                            sizeof(GameActivityKeyEvent))) {
-//                cookGameControllerEvent = true;
-//            } else {
-//                CookGameActivityKeyEvent(keyEvent, _cooked_event_callback);
-//            }
-//        }
-//        android_app_clear_key_events(inputBuffer);
-//    }
-//    if (inputBuffer->motionEventsCount != 0) {
-//        for (uint64_t i = 0; i < inputBuffer->motionEventsCount; ++i) {
-//            GameActivityMotionEvent* motionEvent = &inputBuffer->motionEvents[i];
-//
-//            if (Paddleboat_processGameActivityMotionInputEvent(motionEvent,
-//                                                               sizeof(GameActivityMotionEvent))) {
-//                cookGameControllerEvent = true;
-//            } else {
-//                // Didn't belong to a game controller, process it ourselves if it is a touch event
-//                CookGameActivityMotionEvent(motionEvent,
-//                                            _cooked_event_callback);
-//            }
-//        }
-//        android_app_clear_motion_events(inputBuffer);
-//    }
-//
-//    if (cookGameControllerEvent) {
-//        CookGameControllerEvent(mGameControllerIndex, _cooked_event_callback);
-//    }
-//}
+void NativeEngine::HandleGameActivityInput() {
+    // Swap input buffers so we don't miss any events while processing inputBuffer.
+    android_input_buffer* inputBuffer = android_app_swap_input_buffers(mApp);
+    // Early exit if no events.
+    if (inputBuffer == nullptr) return;
+
+    if (inputBuffer->motionEventsCount != 0) {
+        for (uint64_t i = 0; i < inputBuffer->motionEventsCount; ++i) {
+            GameActivityMotionEvent* motionEvent = &inputBuffer->motionEvents[i];
+            // Didn't belong to a game controller, process it ourselves if it is a touch event
+            _cook_game_activity_motion_event(motionEvent, mSurfWidth, mSurfHeight, _cooked_event_callback);
+        }
+        android_app_clear_motion_events(inputBuffer);
+    }
+}
