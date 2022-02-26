@@ -18,14 +18,23 @@ struct CookedEvent {
     float motionX, motionY;
     float motionMinX, motionMaxX;
     float motionMinY, motionMaxY;
+
+    // whether a text input has occurred
+    bool textInputState;
 };
 
 // event type
 #define COOKED_EVENT_TYPE_POINTER_DOWN 0
 #define COOKED_EVENT_TYPE_POINTER_UP 1
 #define COOKED_EVENT_TYPE_POINTER_MOVE 2
+#define COOKED_EVENT_TYPE_KEY_DOWN 4
+#define COOKED_EVENT_TYPE_KEY_UP 5
+#define COOKED_EVENT_TYPE_BACK 6
+#define COOKED_EVENT_TYPE_TEXT_INPUT 7
 
 typedef bool (*CookedEventCallback)(struct CookedEvent *event);
+
+NativeEngine *NativeEngine::_singleton = NULL;
 
 NativeEngine::NativeEngine(struct android_app *app) {
     mApp = app;
@@ -40,6 +49,15 @@ NativeEngine::NativeEngine(struct android_app *app) {
     mIsFirstFrame = true;
 
     mSurfWidth = mSurfHeight = 0;
+    _singleton = this;
+    mIsInputMode = false;
+
+    mTextInputState.text_UTF8 = "";
+    mTextInputState.text_length = 0;
+    mTextInputState.selection.start = 0;
+    mTextInputState.selection.end = 0;
+    mTextInputState.composingRegion.start = -1;
+    mTextInputState.composingRegion.end = -1;
 }
 
 NativeEngine::~NativeEngine() {
@@ -161,6 +179,8 @@ static bool _cooked_event_callback(struct CookedEvent *event) {
         case COOKED_EVENT_TYPE_POINTER_DOWN:
             ALOGD("COOKED_EVENT_TYPE_POINTER_DOWN: %f %f %f %f %f %f %d",
                   event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
+            NativeEngine::GetInstance()->mIsInputMode = !NativeEngine::GetInstance()->mIsInputMode;
+            NativeEngine::GetInstance()->UpdateInputMode();
             return true;
         case COOKED_EVENT_TYPE_POINTER_UP:
             ALOGD("COOKED_EVENT_TYPE_POINTER_UP: %f %f %f %f %f %f %d",
@@ -172,6 +192,15 @@ static bool _cooked_event_callback(struct CookedEvent *event) {
             return true;
         default:
             return false;
+    }
+}
+
+void NativeEngine::UpdateInputMode() {
+    if(mIsInputMode) {
+        GameActivity_setTextInputState(mApp->activity, &mTextInputState);
+        GameActivity_showSoftInput(mApp->activity, 0);
+    } else {
+        GameActivity_hideSoftInput(mApp->activity, 0);
     }
 }
 
@@ -411,6 +440,15 @@ void NativeEngine::GameLoop() {
 
         HandleGameActivityInput();
 
+        if (mApp->textInputState) {
+            struct CookedEvent ev;
+            ev.type = COOKED_EVENT_TYPE_TEXT_INPUT;
+            ev.textInputState = true;
+            //_cooked_event_callback(&ev);
+            OnTextInput();
+            mApp->textInputState = 0;
+        }
+
         if (IsAnimating()) {
             DoFrame();
         }
@@ -431,4 +469,18 @@ void NativeEngine::HandleGameActivityInput() {
         }
         android_app_clear_motion_events(inputBuffer);
     }
+}
+
+
+void NativeEngine::OnTextInput() {
+    //auto activity = NativeEngine::GetInstance()->GetAndroidApp()->activity;
+    auto activity = mApp->activity;
+    GameActivity_getTextInputState(activity, [](void *context, const GameTextInputState *state) {
+        VLOGD("InputString: %s", state->text_UTF8);
+        NativeEngine::GetInstance()->mTextInputState = *state;
+    }, this);
+    ARect insets;
+    GameTextInput_getImeInsets(GameActivity_getTextInput(activity), &insets);
+    VLOGD("NativeEngine", "IME insets: left=%d right=%d top=%d bottom=%d",
+                        insets.left, insets.right, insets.top, insets.bottom);
 }

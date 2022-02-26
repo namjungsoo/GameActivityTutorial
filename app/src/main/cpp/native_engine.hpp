@@ -4,6 +4,7 @@
 #pragma once
 
 #include <EGL/egl.h>
+#include <game-text-input/gametextinput.h>
 
 class NativeEngine {
 public:
@@ -14,6 +15,14 @@ public:
     // runs application until it dies
     void GameLoop();
     void HandleCommand(int32_t cmd);
+    static NativeEngine *GetInstance() {
+        return _singleton;
+    }
+
+    void UpdateInputMode();
+
+    bool mIsInputMode;
+    GameTextInputState mTextInputState;
 
 private:
     bool IsAnimating();
@@ -31,9 +40,11 @@ private:
     void KillSurface();
     void KillDisplay(); // also causes context and surface to get killed
     bool HandleEglError(EGLint error);
+    void OnTextInput();
 
     // android_app structure
     struct android_app *mApp;
+    static NativeEngine *_singleton;
 
     EGLDisplay mEglDisplay;
     EGLSurface mEglSurface;
