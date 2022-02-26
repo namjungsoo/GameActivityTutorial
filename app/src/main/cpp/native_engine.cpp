@@ -159,13 +159,16 @@ static bool _cook_game_activity_motion_event(GameActivityMotionEvent *motionEven
 static bool _cooked_event_callback(struct CookedEvent *event) {
     switch (event->type) {
         case COOKED_EVENT_TYPE_POINTER_DOWN:
-            ALOGD("COOKED_EVENT_TYPE_POINTER_DOWN: %f %f %f %f %f %f %d", event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
+            ALOGD("COOKED_EVENT_TYPE_POINTER_DOWN: %f %f %f %f %f %f %d",
+                  event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
             return true;
         case COOKED_EVENT_TYPE_POINTER_UP:
-            ALOGD("COOKED_EVENT_TYPE_POINTER_UP: %f %f %f %f %f %f %d", event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
+            ALOGD("COOKED_EVENT_TYPE_POINTER_UP: %f %f %f %f %f %f %d",
+                  event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
             return true;
         case COOKED_EVENT_TYPE_POINTER_MOVE:
-            ALOGD("COOKED_EVENT_TYPE_POINTER_MOVE: %f %f %f %f %f %f %d", event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
+            ALOGD("COOKED_EVENT_TYPE_POINTER_MOVE: %f %f %f %f %f %f %d",
+                  event->motionX, event->motionY, event->motionMinX, event->motionMinY, event->motionMaxX, event->motionMaxY, event->motionIsOnScreen);
             return true;
         default:
             return false;
