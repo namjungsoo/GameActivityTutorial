@@ -499,6 +499,6 @@ void NativeEngine::OnTextInput() {
     }, this);
     ARect insets;
     GameTextInput_getImeInsets(GameActivity_getTextInput(activity), &insets);
-    VLOGD("NativeEngine", "IME insets: left=%d right=%d top=%d bottom=%d",
-                        insets.left, insets.right, insets.top, insets.bottom);
+//    VLOGD("NativeEngine", "IME insets: left=%d right=%d top=%d bottom=%d",
+//                        insets.left, insets.right, insets.top, insets.bottom);
 }
