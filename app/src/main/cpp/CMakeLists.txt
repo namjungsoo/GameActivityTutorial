@@ -11,6 +11,7 @@ project("gameactivitytutorial")
 
 # Add the packages from the Android Game SDK
 find_package(game-activity REQUIRED CONFIG)
+find_package(games-frame-pacing REQUIRED CONFIG)
 
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
@@ -52,6 +53,7 @@ target_link_libraries( # Specifies the target library.
         gameactivitytutorial
 
         game-activity::game-activity
+        games-frame-pacing::swappy_static
 
         android
         EGL

@@ -61,4 +61,7 @@ dependencies {
 
     // To use the Games Activity library
     implementation("androidx.games:games-activity:1.1.0-rc01")
+
+    // To use the Android Frame Pacing library
+    implementation "androidx.games:games-frame-pacing:1.10.0-rc01"
 }
