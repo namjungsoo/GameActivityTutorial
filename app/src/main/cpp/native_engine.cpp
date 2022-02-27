@@ -234,6 +234,8 @@ void NativeEngine::HandleCommand(int32_t cmd) {
             }
             VLOGD("HandleCommand(%d): hasWindow = %d, hasFocus = %d", cmd,
                   mHasWindow ? 1 : 0, mHasFocus ? 1 : 0);
+
+            mSinePlayer.startAudio();
             break;
         case APP_CMD_TERM_WINDOW:
             // The window is going away -- kill the surface

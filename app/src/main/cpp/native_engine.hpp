@@ -5,6 +5,7 @@
 
 #include <EGL/egl.h>
 #include <game-text-input/gametextinput.h>
+#include "OboeSinePlayer.h"
 
 class NativeEngine {
 public:
@@ -63,6 +64,8 @@ private:
 
     // JNI environment
     JNIEnv *mJniEnv;
+
+    OboeSinePlayer mSinePlayer;
 };
 
 #endif//__NATIVE_ENGINE_H__
