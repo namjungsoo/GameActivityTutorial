@@ -1,3 +1,5 @@
+import org.gradle.internal.os.OperatingSystem;
+
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -68,3 +70,30 @@ dependencies {
 
     implementation 'com.google.oboe:oboe:1.6.1'
 }
+
+// Android Performance Tuner validation setup and protoc compile tasks
+task createJar(type: GradleBuild) {
+    buildFile = GameSDKPath + '/util/tuningfork/tools/validation/build.gradle'
+    tasks = ['createJar']
+}
+
+def getProtocPath() {
+    String platformName
+    if (OperatingSystem.current().isLinux()) platformName = "linux-x86/bin/protoc"
+    if (OperatingSystem.current().isMacOsX()) platformName = "mac/bin/protoc"
+    if (OperatingSystem.current().isWindows()) platformName = "win/bin/protoc"
+    return GameSDKPath + "/third_party/protobuf-3.0.0/install/"  + platformName
+}
+
+task buildTuningForkBinFiles(type: Exec) {
+    dependsOn createJar
+    commandLine "java",
+            "-jar",
+            GameSDKPath + "/util/tuningfork/tools/validation/build/libs/TuningforkApkValidationTool.jar",
+            "--tuningforkPath",
+            "src/main/assets/tuningfork",
+            "--protoCompiler",
+            getProtocPath()
+}
+
+tasks.preBuild.dependsOn("buildTuningForkBinFiles")
