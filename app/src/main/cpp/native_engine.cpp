@@ -27,9 +27,6 @@ struct CookedEvent {
 #define COOKED_EVENT_TYPE_POINTER_DOWN 0
 #define COOKED_EVENT_TYPE_POINTER_UP 1
 #define COOKED_EVENT_TYPE_POINTER_MOVE 2
-#define COOKED_EVENT_TYPE_KEY_DOWN 4
-#define COOKED_EVENT_TYPE_KEY_UP 5
-#define COOKED_EVENT_TYPE_BACK 6
 #define COOKED_EVENT_TYPE_TEXT_INPUT 7
 
 typedef bool (*CookedEventCallback)(struct CookedEvent *event);
@@ -473,7 +470,6 @@ void NativeEngine::HandleGameActivityInput() {
 
 
 void NativeEngine::OnTextInput() {
-    //auto activity = NativeEngine::GetInstance()->GetAndroidApp()->activity;
     auto activity = mApp->activity;
     GameActivity_getTextInputState(activity, [](void *context, const GameTextInputState *state) {
         VLOGD("InputString: %s", state->text_UTF8);
