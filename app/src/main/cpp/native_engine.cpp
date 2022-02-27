@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "Log.h"
+#include "swappy/swappyGL.h"
 
 #define LOG_TAG "GameActivityTutorial"
 #define VLOGD ALOGD
@@ -55,10 +56,26 @@ NativeEngine::NativeEngine(struct android_app *app) {
     mTextInputState.selection.end = 0;
     mTextInputState.composingRegion.start = -1;
     mTextInputState.composingRegion.end = -1;
+
+    ALOGI("Calling SwappyGL_init");
+    SwappyGL_init(GetJniEnv(), mApp->activity->javaGameActivity);
+    SwappyGL_setSwapIntervalNS(SWAPPY_SWAP_60FPS);
 }
 
 NativeEngine::~NativeEngine() {
+    SwappyGL_destroy();
     KillContext();
+}
+
+JNIEnv *NativeEngine::GetJniEnv() {
+    if (!mJniEnv) {
+        ALOGI("Attaching current thread to JNI.");
+        if (0 != mApp->activity->vm->AttachCurrentThread(&mJniEnv, NULL)) {
+            ALOGE("*** FATAL ERROR: Failed to attach thread to JNI.");
+        }
+        ALOGI("Attached current thread to JNI, %p", mJniEnv);
+    }
+    return mJniEnv;
 }
 
 bool NativeEngine::InitDisplay() {
@@ -211,8 +228,10 @@ void NativeEngine::HandleCommand(int32_t cmd) {
         case APP_CMD_INIT_WINDOW:
             // We have a window!
             VLOGD("NativeEngine: APP_CMD_INIT_WINDOW");
-            if (mApp->window != NULL)
+            if (mApp->window != NULL) {
                 mHasWindow = true;
+                SwappyGL_setWindow(mApp->window);
+            }
             VLOGD("HandleCommand(%d): hasWindow = %d, hasFocus = %d", cmd,
                   mHasWindow ? 1 : 0, mHasFocus ? 1 : 0);
             break;
@@ -410,7 +429,8 @@ void NativeEngine::DoFrame() {
     }
 
     // Swap buffers.
-    if (EGL_FALSE == eglSwapBuffers(mEglDisplay, mEglSurface)) {
+    if (!SwappyGL_swap(mEglDisplay, mEglSurface)) {        // failed to swap buffers...
+        ALOGW("NativeEngine: SwappyGL_swap failed, EGL error %d", eglGetError());
         HandleEglError(eglGetError());
     }
 }

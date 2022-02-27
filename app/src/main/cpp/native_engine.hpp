@@ -14,6 +14,10 @@ public:
 
     // runs application until it dies
     void GameLoop();
+
+    // returns the JNI environment
+    JNIEnv *GetJniEnv();
+
     void HandleCommand(int32_t cmd);
     static NativeEngine *GetInstance() {
         return _singleton;
@@ -56,6 +60,9 @@ private:
     bool mIsFirstFrame;
 
     int mSurfWidth, mSurfHeight;
+
+    // JNI environment
+    JNIEnv *mJniEnv;
 };
 
 #endif//__NATIVE_ENGINE_H__
