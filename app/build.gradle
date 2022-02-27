@@ -64,4 +64,6 @@ dependencies {
 
     // To use the Android Frame Pacing library
     implementation "androidx.games:games-frame-pacing:1.10.0-rc01"
+
+    implementation 'com.google.oboe:oboe:1.6.1'
 }
