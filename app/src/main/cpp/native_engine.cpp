@@ -60,9 +60,12 @@ NativeEngine::NativeEngine(struct android_app *app) {
     ALOGI("Calling SwappyGL_init");
     SwappyGL_init(GetJniEnv(), mApp->activity->javaGameActivity);
     SwappyGL_setSwapIntervalNS(SWAPPY_SWAP_60FPS);
+
+    mTuningManager = new TuningManager(GetJniEnv(), app->activity->javaGameActivity, app->config);
 }
 
 NativeEngine::~NativeEngine() {
+    delete mTuningManager;
     SwappyGL_destroy();
     KillContext();
 }
@@ -413,6 +416,11 @@ void NativeEngine::DoFrame() {
         // not ready
         ALOGE("NativeEngine: preparation to render failed.");
         return;
+    }
+
+    if (mIsFirstFrame) {
+        mIsFirstFrame = false;
+        mTuningManager->FinishLoading();
     }
 
     // how big is the surface? We query every frame because it's cheap, and some

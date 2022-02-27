@@ -6,6 +6,7 @@
 #include <EGL/egl.h>
 #include <game-text-input/gametextinput.h>
 #include "OboeSinePlayer.h"
+#include "tuning_manager.hpp"
 
 class NativeEngine {
 public:
@@ -64,6 +65,9 @@ private:
 
     // JNI environment
     JNIEnv *mJniEnv;
+
+    // Tuning manager instance
+    TuningManager *mTuningManager;
 
     OboeSinePlayer mSinePlayer;
 };
